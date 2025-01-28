@@ -6,7 +6,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackContext, MessageHandler, filters, CallbackQueryHandler
 
 # CONFIGURATION
-BOT_TOKEN = "7971488271:AAE5o0zQj2NBpwcWBQjIKSCiWT63jbRy4f8"
+BOT_TOKEN = "7765454558:AAE9819iTMd3IQvEjxjUKQdkgO3hImwLXfI"
 ADMIN_ID = 6773132033  # Replace with your Telegram ID
 BINARY_PATH = "./udp_flood"  # Path to the compiled C binary
 DB_PATH = "users.db"
