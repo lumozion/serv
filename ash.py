@@ -8,7 +8,7 @@ from telegram.ext import Application, CommandHandler, CallbackContext, MessageHa
 # CONFIGURATION
 BOT_TOKEN = "7765454558:AAE9819iTMd3IQvEjxjUKQdkgO3hImwLXfI"
 ADMIN_ID = 6773132033  # Replace with your Telegram ID
-BINARY_PATH = "./udp_flood"  # Path to the compiled C binary
+BINARY_PATH = "./illegal"  # Path to the compiled C binary
 DB_PATH = "users.db"
 
 # Initialize the database
